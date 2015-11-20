@@ -47,31 +47,19 @@ Accounts.LinkUserFromExternalService = function (serviceName, serviceData, optio
   if (!user) {
     return new Error('User not found for LinkUserFromExternalService.');
   }
-  var checkExistingSelector = {};
-  checkExistingSelector['services.' + serviceName + '.id'] = serviceData.id;
-  var existingUser = Meteor.users.findOne(checkExistingSelector);
-  if (existingUser && existingUser._id) {
-    throw new Error('This social account is already in used by other user');
-  }
 
-  //we do not allow link another account from existing service.
-  //XXX maybe we can override this?
-  if (user.services && user.services[serviceName] &&
-      user.services[serviceName].id !== serviceData.id) {
-
-    return new Error('User can not link a service that is already actived.');
-  } else {
-    var setAttrs = {};
-    _.each(serviceData, function(value, key) {
+  var setAttrs = {};
+  _.each(serviceData, function(value, key) {
+    if (key !== 'id') {
       setAttrs["services." + serviceName + "." + key] = value;
-    });
+    }
+  });
 
-    Meteor.users.update(user._id, {$set: setAttrs});
-    return {
-      type: serviceName,
-      userId: user._id
-    };
-  }
+  Meteor.users.update(user._id, {$set: setAttrs});
+  return {
+    type: serviceName,
+    userId: user._id
+  };
 };
 
 Accounts.unlinkService = function (userId, serviceName, cb) {
@@ -95,13 +83,3 @@ Accounts.unlinkService = function (userId, serviceName, cb) {
     throw new Error(500, 'no service');
   }
 };
-
-Meteor.methods({
-  '_accounts/unlink/service': function (userId, service) {
-    try {
-      Accounts.unlinkService(userId, service);
-    } catch (e) {
-      throw new Meteor.Error(e);
-    }
-  }
-});
